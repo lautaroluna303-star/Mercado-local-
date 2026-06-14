@@ -10,11 +10,11 @@
 <meta name="theme-color" content="#2563EB">
 
 <!-- Ícono que aparece en el navegador / pestaña -->
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
 
 <!-- Ícono cuando se agrega a la pantalla de inicio (iPhone/Android) -->
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MercadoLocal">
@@ -47,6 +47,26 @@
   --sh-lg:0 12px 40px rgba(0,0,0,.14);
 }
 
+html[data-theme="dark"]{
+  --brand-l:rgba(37,99,235,.18);
+  --ink:#F1F5F9;
+  --ink-2:#CBD5E1;
+  --ink-3:#94A3B8;
+  --ink-4:#64748B;
+  --border:#283449;
+  --surface:#0B1220;
+  --white:#1A2436;
+  --green-l:rgba(5,150,105,.18);
+  --red-l:rgba(220,38,38,.18);
+  --amber-l:rgba(217,119,6,.18);
+  --sh:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  --sh-md:0 4px 12px rgba(0,0,0,.45);
+  --sh-lg:0 12px 40px rgba(0,0,0,.55);
+}
+
+html{transition:background-color .2s}
+body{transition:background-color .2s,color .2s}
+
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--surface);color:var(--ink);min-height:100vh;font-size:14px}
 
 /* ── SHARED ── */
@@ -73,7 +93,7 @@ input[type=text],input[type=number],input[type=email],input[type=password],selec
   width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--r);
   font-family:inherit;font-size:13px;color:var(--ink);background:var(--white);outline:none;
   transition:border-color .15s}
-input:focus,select:focus,textarea:focus{border-color:var(--brand);background:#fff}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);background:var(--white)}
 label{display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
 .form-group{margin-bottom:14px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -97,6 +117,7 @@ label{display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin-bot
 #view-login{
   min-height:100vh;
   display:none;
+  position:relative;
   background:linear-gradient(135deg,#0F172A 0%,#1E3A5F 60%,#1D4ED8 100%);
   align-items:center;justify-content:center;padding:24px;
 }
@@ -112,7 +133,7 @@ label{display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin-bot
 .login-logo h1{font-size:26px;font-weight:800;color:#fff;letter-spacing:-.5px}
 .login-logo p{font-size:13px;color:#93C5FD;margin-top:4px}
 
-.login-box{background:#fff;border-radius:20px;padding:28px;box-shadow:var(--sh-lg)}
+.login-box{background:var(--white);border-radius:20px;padding:28px;box-shadow:var(--sh-lg)}
 .login-box h2{font-size:17px;font-weight:800;margin-bottom:20px;color:var(--ink)}
 
 .login-tabs{display:flex;gap:8px;margin-bottom:20px}
@@ -236,7 +257,7 @@ tr:hover td{background:var(--surface)}
 #view-client{min-height:100vh}
 
 .client-nav{
-  background:#fff;border-bottom:1px solid var(--border);
+  background:var(--white);border-bottom:1px solid var(--border);
   padding:0 24px;height:60px;display:flex;align-items:center;
   justify-content:space-between;position:sticky;top:0;z-index:50;
   box-shadow:var(--sh)
@@ -254,7 +275,7 @@ tr:hover td{background:var(--surface)}
 .client-hero p{font-size:14px;color:#93C5FD;max-width:420px;margin:0 auto 20px}
 .hero-search{
   max-width:440px;margin:0 auto;display:flex;
-  background:#fff;border-radius:var(--r-lg);overflow:hidden;
+  background:var(--white);border-radius:var(--r-lg);overflow:hidden;
   box-shadow:0 8px 24px rgba(0,0,0,.25)
 }
 .hero-search input{flex:1;padding:12px 16px;border:none;outline:none;font-family:inherit;font-size:14px}
@@ -296,7 +317,7 @@ tr:hover td{background:var(--surface)}
 /* ── MODALS ── */
 .overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
 .overlay.open{display:flex}
-.modal{background:#fff;border-radius:20px;padding:26px;width:100%;max-width:460px;box-shadow:var(--sh-lg);animation:slideUp .2s ease;max-height:90vh;overflow-y:auto}
+.modal{background:var(--white);border-radius:20px;padding:26px;width:100%;max-width:460px;box-shadow:var(--sh-lg);animation:slideUp .2s ease;max-height:90vh;overflow-y:auto}
 @keyframes slideUp{from{transform:translateY(12px);opacity:0}}
 .modal-title{font-size:18px;font-weight:800;margin-bottom:20px}
 .modal-actions{display:flex;gap:8px;margin-top:20px}
@@ -312,13 +333,40 @@ tr:hover td{background:var(--surface)}
 .cp-btn.sel{border-color:var(--ink)}
 
 /* toast */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--ink);color:#fff;padding:10px 22px;border-radius:40px;font-size:13px;font-weight:700;z-index:300;transition:transform .25s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;box-shadow:var(--sh-lg)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#0F172A;color:#fff;padding:10px 22px;border-radius:40px;font-size:13px;font-weight:700;z-index:300;transition:transform .25s cubic-bezier(.175,.885,.32,1.275);white-space:nowrap;box-shadow:var(--sh-lg)}
 .toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── THEME TOGGLE ── */
+.theme-toggle{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  border:1.5px solid var(--border);background:var(--white);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;transition:background .15s,transform .1s
+}
+.theme-toggle:hover{background:var(--surface)}
+.theme-toggle:active{transform:scale(.92)}
+.theme-toggle.on-dark{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff}
+.theme-toggle.on-dark:hover{background:rgba(255,255,255,.18)}
+
+/* ── HAMBURGER (mobile nav) ── */
+.hamburger-btn{
+  display:none;width:36px;height:36px;border-radius:var(--r);flex-shrink:0;
+  border:1.5px solid var(--border);background:var(--white);color:var(--ink);
+  align-items:center;justify-content:center;font-size:18px;cursor:pointer
+}
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:190;backdrop-filter:blur(2px)}
+.sidebar-backdrop.open{display:block}
 
 /* ── RESPONSIVE ── */
 @media(max-width:768px){
   #view-admin.active{grid-template-columns:1fr}
-  .sidebar{display:none}
+  .sidebar{
+    position:fixed;top:0;left:0;height:100vh;width:240px;z-index:200;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:var(--sh-lg)
+  }
+  .sidebar.open{transform:translateX(0)}
+  .hamburger-btn{display:flex}
   .dash-grid{grid-template-columns:repeat(2,1fr)}
   .two-col,.three-col{grid-template-columns:1fr}
   .form-row{grid-template-columns:1fr}
@@ -329,6 +377,7 @@ tr:hover td{background:var(--surface)}
 
 <!-- ══ LOGIN ══ -->
 <div id="view-login" class="active">
+  <button class="theme-toggle on-dark" id="theme-btn-login" onclick="toggleTheme()" style="position:absolute;top:18px;right:18px" title="Cambiar tema">🌙</button>
   <div class="login-wrap">
     <div class="login-logo">
       <div class="logo-mark">🏪</div>
@@ -349,14 +398,13 @@ tr:hover td{background:var(--surface)}
       <div id="lt-admin" style="display:none">
         <div class="form-group">
           <label>Usuario</label>
-          <input type="text" id="login-user" placeholder="admin" value="admin">
+          <input type="text" id="login-user" placeholder="Ingresá tu usuario" autocomplete="off">
         </div>
         <div class="form-group">
           <label>Contraseña</label>
-          <input type="password" id="login-pass" placeholder="••••••" value="1234">
+          <input type="password" id="login-pass" placeholder="Ingresá tu contraseña" autocomplete="off">
         </div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Entrar al panel</button>
-        <div class="login-demo-note">Demo: usuario <strong>admin</strong> / contraseña <strong>1234</strong></div>
       </div>
     </div>
   </div>
@@ -364,8 +412,11 @@ tr:hover td{background:var(--surface)}
 
 <!-- ══ ADMIN ══ -->
 <div id="view-admin">
+  <!-- BACKDROP (mobile) -->
+  <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="toggleDrawer()"></div>
+
   <!-- SIDEBAR -->
-  <aside class="sidebar">
+  <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="mark">
         <div class="mark-icon">🏪</div>
@@ -392,16 +443,20 @@ tr:hover td{background:var(--surface)}
           <div style="font-size:13px;font-weight:700;color:#e2e8f0" id="sa-name">Admin</div>
           <div style="font-size:11px;color:#64748b">Administrador</div>
         </div>
-        <button class="btn btn-ghost btn-sm" style="margin-left:auto;padding:5px 8px;font-size:11px" onclick="logout()">Salir</button>
+        <button class="theme-toggle on-dark" id="theme-btn-admin" onclick="toggleTheme()" style="margin-left:auto" title="Cambiar tema">🌙</button>
       </div>
+      <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;margin-top:10px" onclick="logout()">Salir</button>
     </div>
   </aside>
 
   <!-- MAIN -->
   <div class="admin-main">
     <div class="admin-topbar">
-      <h2 id="topbar-title">Dashboard</h2>
-      <div style="display:flex;gap:8px" id="topbar-actions"></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="hamburger-btn" onclick="toggleDrawer()" title="Menú">☰</button>
+        <h2 id="topbar-title">Dashboard</h2>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center" id="topbar-actions"></div>
     </div>
     <div class="admin-content">
 
@@ -496,7 +551,10 @@ tr:hover td{background:var(--surface)}
         <div class="cl-sub">Vitrina digital</div>
       </div>
     </div>
-    <button class="btn btn-brand-outline btn-sm" onclick="goLogin()">Panel de gestión</button>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-brand-outline btn-sm" onclick="goLogin()">Panel de gestión</button>
+      <button class="theme-toggle" id="theme-btn-client" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+    </div>
   </nav>
 
   <div class="client-hero">
@@ -670,18 +728,18 @@ let state = {
   currentUser: null
 };
 
-const USERS = [{ user:'admin', pass:'1234', name:'Administrador' }];
+const USERS = [{ user:'galaxi0806', pass:'806080', name:'Administrador' }];
 const LOW_THR = 5;
 
 function load(){
-  try{ const s=localStorage.getItem('ml_v1'); if(s) Object.assign(state,JSON.parse(s)); } catch(e){}
+  try{ const s=localStorage.getItem('ml_v2'); if(s) Object.assign(state,JSON.parse(s)); } catch(e){}
   state.editingStoreId=null; state.editingProdId=null;
   state.deletingType=null; state.deletingId=null;
   state.clientStoreFilter=null; state.clientCatFilter='all'; state.invCatFilter='all';
 }
 function save(){
   const {stores,products}=state;
-  localStorage.setItem('ml_v1',JSON.stringify({stores,products}));
+  localStorage.setItem('ml_v2',JSON.stringify({stores,products}));
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function fmtMoney(n){ return '$'+Number(n).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2}); }
@@ -691,6 +749,37 @@ function toast(msg,ms=2400){
 }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ─────────────────────────────────────────────
+// THEME (oscuro / claro)
+// ─────────────────────────────────────────────
+function applyTheme(){
+  const t = localStorage.getItem('ml_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+  const icon = t === 'dark' ? '☀️' : '🌙';
+  ['theme-btn-login','theme-btn-admin','theme-btn-client'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.textContent = icon;
+  });
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('ml_theme', next);
+  applyTheme();
+}
+
+// ─────────────────────────────────────────────
+// MENÚ LATERAL (mobile drawer)
+// ─────────────────────────────────────────────
+function toggleDrawer(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('open');
+}
+function closeDrawer(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
 
 // ─────────────────────────────────────────────
 // NAV
@@ -732,6 +821,7 @@ function adminPanel(name, el){
   if(name==='inventory') renderInventory();
   if(name==='lowstock') renderLowStock();
   updateBadge();
+  closeDrawer();
 }
 
 function updateBadge(){
@@ -1125,40 +1215,10 @@ function clientCat(el,c){ state.clientCatFilter=c; renderClientProducts(); }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
 
 // ─────────────────────────────────────────────
-// SEED DEMO DATA
-// ─────────────────────────────────────────────
-function seedDemo(){
-  if(state.stores.length) return;
-  const stores=[
-    {id:'s1',name:'Carnicería Don Ramón',emoji:'🥩',category:'🥩 Carnicería',desc:'La mejor carne del barrio desde 1985',color:'#DC2626'},
-    {id:'s2',name:'Pollería El Gallo',emoji:'🐔',category:'🐔 Pollería',desc:'Pollos frescos todos los días',color:'#D97706'},
-    {id:'s3',name:'Verdulería La Huerta',emoji:'🥬',category:'🥬 Verdulería',desc:'Frutas y verduras de estación',color:'#059669'},
-    {id:'s4',name:'Mueblería Confort',emoji:'🛋️',category:'🛋️ Mueblería',desc:'Muebles para el hogar',color:'#7C3AED'},
-  ];
-  const products=[
-    {id:'p1',storeId:'s1',name:'Asado de tira',emoji:'🥩',price:8500,stock:15,category:'Vacuno',unit:'kg'},
-    {id:'p2',storeId:'s1',name:'Carne picada',emoji:'🥩',price:6200,stock:3,category:'Vacuno',unit:'kg'},
-    {id:'p3',storeId:'s1',name:'Chorizo',emoji:'🍖',price:4800,stock:0,category:'Embutidos',unit:'kg'},
-    {id:'p4',storeId:'s1',name:'Vacío',emoji:'🥩',price:9200,stock:8,category:'Vacuno',unit:'kg'},
-    {id:'p5',storeId:'s2',name:'Pollo entero',emoji:'🐔',price:4500,stock:22,category:'Pollo fresco',unit:'kg'},
-    {id:'p6',storeId:'s2',name:'Muslos',emoji:'🍗',price:3200,stock:2,category:'Pollo fresco',unit:'kg'},
-    {id:'p7',storeId:'s2',name:'Pechuga sin hueso',emoji:'🍗',price:5800,stock:10,category:'Pollo fresco',unit:'kg'},
-    {id:'p8',storeId:'s3',name:'Tomate perita',emoji:'🍅',price:1200,stock:40,category:'Verdura',unit:'kg'},
-    {id:'p9',storeId:'s3',name:'Papa',emoji:'🥔',price:900,stock:1,category:'Verdura',unit:'kg'},
-    {id:'p10',storeId:'s3',name:'Banana',emoji:'🍌',price:1500,stock:30,category:'Fruta',unit:'kg'},
-    {id:'p11',storeId:'s3',name:'Manzana Roja',emoji:'🍎',price:1800,stock:0,category:'Fruta',unit:'kg'},
-    {id:'p12',storeId:'s4',name:'Sillón 3 cuerpos',emoji:'🛋️',price:285000,stock:4,category:'Living',unit:'unid.'},
-    {id:'p13',storeId:'s4',name:'Mesa de comedor',emoji:'🪑',price:120000,stock:2,category:'Comedor',unit:'unid.'},
-    {id:'p14',storeId:'s4',name:'Cama 2 plazas',emoji:'🛏️',price:195000,stock:0,category:'Dormitorio',unit:'unid.'},
-  ];
-  state.stores=stores; state.products=products; save();
-}
-
-// ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
 load();
-seedDemo();
+applyTheme();
 refreshStoreSelects();
 updateBadge();
 show('login');
