@@ -1,13 +1,15 @@
 // MercadoLocal - Service Worker
 // Hace que la app funcione sin conexión (offline-first)
 
-const CACHE_NAME = 'mercadolocal-v2';
+const CACHE_NAME = 'mercadolocal-v3';
 
 // Archivos que se guardan apenas se instala la app
 const PRECACHE_URLS = [
   './',
   './index.html',
+  './admin.html',
   './manifest.json',
+  './manifest-admin.json',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
@@ -53,7 +55,10 @@ self.addEventListener('fetch', (event) => {
           caches.open(CACHE_NAME).then((cache) => cache.put(req, resClone));
           return res;
         })
-        .catch(() => caches.match('./index.html'))
+        .catch(() =>
+          // Sin internet: busca la página exacta que se pidió (admin.html o index.html)
+          caches.match(req).then((cached) => cached || caches.match('./index.html'))
+        )
     );
     return;
   }
