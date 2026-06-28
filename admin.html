@@ -369,6 +369,7 @@ tr:hover td{background:var(--surface)}
       <div class="sidebar-section">Inventario</div>
       <div class="nav-item" onclick="adminPanel('inventory',this)"><span class="ni-icon">📦</span> Productos</div>
       <div class="nav-item" onclick="adminPanel('lowstock',this)" id="nav-lowstock"><span class="ni-icon">⚠️</span> Stock bajo <span class="ni-badge" id="low-badge">0</span></div>
+      <div class="nav-item" onclick="adminPanel('waitlist',this)"><span class="ni-icon">🔔</span> Lista de espera <span class="ni-badge" id="wait-badge" style="display:none">0</span></div>
       <div class="sidebar-section">Negocio</div>
       <div class="nav-item" onclick="adminPanel('settings',this)"><span class="ni-icon">⚙️</span> Configuración</div>
       <div class="sidebar-section">Vista</div>
@@ -478,7 +479,7 @@ tr:hover td{background:var(--surface)}
 
       <!-- SETTINGS -->
       <div class="admin-panel" id="panel-settings">
-        <div class="card" style="max-width:480px;padding:24px">
+        <div class="card" style="max-width:480px;padding:24px;margin-bottom:16px">
           <div class="section-header"><span class="section-title">💬 Contacto por WhatsApp</span></div>
           <p style="font-size:13px;color:var(--ink-3);margin-bottom:16px;line-height:1.5">
             Este número aparece en la vitrina para que los clientes te escriban cuando un producto no tenga stock, o para hacer consultas generales.
@@ -490,6 +491,24 @@ tr:hover td{background:var(--surface)}
           </div>
           <button class="btn btn-primary" onclick="saveSettings()">💾 Guardar</button>
         </div>
+
+        <div class="card" style="max-width:480px;padding:24px">
+          <div class="section-header"><span class="section-title">🔔 Notificaciones del celular</span></div>
+          <p style="font-size:13px;color:var(--ink-3);margin-bottom:16px;line-height:1.5">
+            Activá las notificaciones para que el celular te avise cuando un producto se agote. Tenés que tener la app abierta en ese momento para recibirlas.
+          </p>
+          <div id="notif-status" style="margin-bottom:14px;font-size:13px;font-weight:600"></div>
+          <button class="btn btn-primary" id="notif-btn" onclick="requestNotifPermission()">🔔 Activar notificaciones</button>
+        </div>
+      </div>
+
+      <!-- WAITLIST -->
+      <div class="admin-panel" id="panel-waitlist">
+        <div class="section-header" style="margin-bottom:16px">
+          <span class="section-title">🔔 Clientes esperando stock</span>
+          <button class="btn btn-danger btn-sm" onclick="clearWaitlist()">🗑️ Limpiar lista</button>
+        </div>
+        <div id="waitlist-content"></div>
       </div>
 
     </div>
@@ -743,7 +762,8 @@ function adminPanel(name, el){
   if(name==='stores') renderAdminStores();
   if(name==='inventory') renderInventory();
   if(name==='lowstock') renderLowStock();
-  if(name==='settings') renderSettings();
+  if(name==='settings'){ renderSettings(); renderNotifStatus(); }
+  if(name==='waitlist') renderWaitlist();
   updateBadge();
   closeDrawer();
 }
@@ -751,6 +771,7 @@ function adminPanel(name, el){
 function updateBadge(){
   const n=state.products.filter(p=>p.stock<=LOW_THR).length;
   document.getElementById('low-badge').textContent=n;
+  updateWaitBadge();
 }
 
 // ─────────────────────────────────────────────
@@ -937,7 +958,12 @@ function saveProduct(){
   if(isNaN(stock)||stock<0){ toast('⚠️ Stock inválido'); return; }
   if(state.editingProdId){
     const p=state.products.find(x=>x.id===state.editingProdId);
+    const wasAbove = p.stock > 0;
     Object.assign(p,{name,storeId,price,stock,category,unit,emoji:state.selEmoji});
+    if(wasAbove && stock===0){
+      const s=state.stores.find(x=>x.id===storeId);
+      sendStockNotif(name, s?s.name:'');
+    }
     toast('✅ Producto actualizado');
   } else {
     state.products.push({id:uid(),name,storeId,price,stock,category,unit,emoji:state.selEmoji});
@@ -1056,12 +1082,119 @@ function confirmDelete(){
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
 
 // ─────────────────────────────────────────────
+// NOTIFICACIONES DEL CELULAR
+// ─────────────────────────────────────────────
+function requestNotifPermission(){
+  if(!('Notification' in window)){ toast('⚠️ Tu navegador no soporta notificaciones'); return; }
+  Notification.requestPermission().then(perm=>{
+    renderNotifStatus();
+    if(perm==='granted') toast('✅ Notificaciones activadas');
+    else toast('⚠️ Permiso denegado');
+  });
+}
+
+function renderNotifStatus(){
+  const el=document.getElementById('notif-status');
+  const btn=document.getElementById('notif-btn');
+  if(!el||!btn) return;
+  if(!('Notification' in window)){
+    el.innerHTML='<span style="color:var(--red)">❌ Tu navegador no soporta notificaciones</span>';
+    btn.style.display='none'; return;
+  }
+  const p=Notification.permission;
+  if(p==='granted'){
+    el.innerHTML='<span style="color:var(--green)">✅ Notificaciones activadas</span>';
+    btn.style.display='none';
+  } else if(p==='denied'){
+    el.innerHTML='<span style="color:var(--red)">❌ Permiso denegado — activalo desde la configuración del navegador</span>';
+    btn.style.display='none';
+  } else {
+    el.innerHTML='<span style="color:var(--amber)">⏳ Sin configurar todavía</span>';
+    btn.style.display='inline-flex';
+  }
+}
+
+function sendStockNotif(productName, storeName){
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  new Notification('⚠️ Producto agotado — MercadoLocal', {
+    body: `"${productName}" de ${storeName} llegó a 0. Recordá reponer stock.`,
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    tag: 'stock-' + productName,
+    requireInteraction: false
+  });
+}
+
+// ─────────────────────────────────────────────
+// LISTA DE ESPERA (clientes q quieren avisarse)
+// ─────────────────────────────────────────────
+function getWaitlist(){ try{ return JSON.parse(localStorage.getItem('ml_waitlist')||'[]'); } catch(e){ return []; } }
+function saveWaitlistData(wl){ localStorage.setItem('ml_waitlist', JSON.stringify(wl)); }
+
+function updateWaitBadge(){
+  const n=getWaitlist().length;
+  const el=document.getElementById('wait-badge');
+  if(!el) return;
+  if(n>0){ el.textContent=n; el.style.display='inline'; }
+  else { el.style.display='none'; }
+}
+
+function renderWaitlist(){
+  const wl=getWaitlist();
+  const el=document.getElementById('waitlist-content');
+  if(!wl.length){
+    el.innerHTML=`<div class="empty-state"><div class="icon">🔔</div><h3>Ningún cliente esperando</h3><p>Cuando un cliente toque "Avisame cuando haya stock" en la vitrina, su nombre aparece acá.</p></div>`;
+    return;
+  }
+  // group by product
+  const byProd={};
+  wl.forEach(e=>{
+    if(!byProd[e.prodId]) byProd[e.prodId]=[];
+    byProd[e.prodId].push(e);
+  });
+  el.innerHTML=Object.entries(byProd).map(([prodId,entries])=>{
+    const p=state.products.find(x=>x.id===prodId);
+    const s=p?state.stores.find(x=>x.id===p.storeId):null;
+    const pName=p?`${p.emoji} ${p.name}`:`Producto eliminado`;
+    const sName=s?s.name:'';
+    return `<div class="card" style="padding:16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-weight:800;font-size:14px">${pName}</div>
+          ${sName?`<div style="font-size:12px;color:var(--ink-3)">${sName}</div>`:''}
+        </div>
+        <span class="badge badge-amber">${entries.length} esperando</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${entries.map(e=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface);border-radius:var(--r);font-size:13px">
+            <div>
+              <span style="font-weight:600">👤 ${e.name}</span>
+              <span style="color:var(--ink-3);font-size:11px;margin-left:8px">${new Date(e.ts).toLocaleDateString('es-AR')}</span>
+            </div>
+            ${e.phone?`<a href="https://wa.me/${e.phone.replace(/\D/g,'')}" target="_blank" class="btn btn-whatsapp btn-sm">💬 WA</a>`:''}
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function clearWaitlist(){
+  if(!confirm('¿Limpiar toda la lista de espera?')) return;
+  saveWaitlistData([]);
+  updateWaitBadge();
+  renderWaitlist();
+  toast('🗑️ Lista de espera limpiada');
+}
+
+// ─────────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────────
 load();
 applyTheme();
 refreshStoreSelects();
 updateBadge();
+updateWaitBadge();
 show('login');
 
 // Registra el service worker para que la app funcione sin internet (offline)

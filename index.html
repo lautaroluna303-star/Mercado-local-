@@ -246,6 +246,28 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Ar
 <a id="wa-float" class="wa-float" href="#" target="_blank" rel="noopener" title="Escribinos por WhatsApp">💬</a>
 <div class="toast" id="toast"></div>
 
+<!-- MODAL: Avisame cuando haya stock -->
+<div id="modal-notify" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:200;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)">
+  <div style="background:var(--white);border-radius:20px;padding:24px;width:100%;max-width:380px;box-shadow:0 12px 40px rgba(0,0,0,.2);animation:slideUp .2s ease">
+    <div style="font-size:18px;font-weight:800;margin-bottom:6px">🔔 Avisame cuando haya stock</div>
+    <div style="font-size:13px;color:var(--ink-3);margin-bottom:16px" id="notify-prod-name"></div>
+    <div style="margin-bottom:12px">
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">Tu nombre</label>
+      <input type="text" id="notify-name" placeholder="Ej: Juan" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;color:var(--ink);background:var(--white);outline:none">
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="display:block;font-size:12px;font-weight:700;color:var(--ink-3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em">WhatsApp (opcional)</label>
+      <input type="tel" id="notify-phone" placeholder="Ej: 1122334455" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:inherit;font-size:13px;color:var(--ink);background:var(--white);outline:none">
+      <p style="font-size:11px;color:var(--ink-3);margin-top:4px">Si lo dejás, el negocio te puede escribir directo.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeNotifyModal()" style="flex:1;padding:10px;border-radius:10px;background:var(--border);color:var(--ink-2);font-family:inherit;font-size:13px;font-weight:700;border:none;cursor:pointer">Cancelar</button>
+      <button onclick="saveNotify()" style="flex:1;padding:10px;border-radius:10px;background:var(--brand);color:#fff;font-family:inherit;font-size:13px;font-weight:700;border:none;cursor:pointer">🔔 Anotarme</button>
+    </div>
+  </div>
+</div>
+<style>@keyframes slideUp{from{transform:translateY(12px);opacity:0}}</style>
+
 <script>
 // ─────────────────────────────────────────────
 // ESTADO (solo lectura: lo carga el panel admin)
@@ -368,7 +390,12 @@ function renderClientProducts(){
     let waBtn='';
     if(p.stock===0 && WA_NUMBER){
       const msg=encodeURIComponent(`Hola! 👋 Quería consultar por "${p.name}"${s?' de '+s.name:''}. Vi en la vitrina que no hay stock, ¿cuándo tendrían?`);
-      waBtn=`<a class="wa-btn-inline" href="https://wa.me/${WA_NUMBER}?text=${msg}" target="_blank" rel="noopener">💬 Consultar disponibilidad</a>`;
+      waBtn=`<a class="wa-btn-inline" href="https://wa.me/${WA_NUMBER}?text=${msg}" target="_blank" rel="noopener">💬 Consultar por WhatsApp</a>`;
+    }
+    let notifyBtn='';
+    if(p.stock===0){
+      const sName=s?s.name:'';
+      notifyBtn=`<button onclick="openNotifyModal('${p.id}','${p.name.replace(/'/g,"\\'")}','${sName.replace(/'/g,"\\'")}' )" style="display:flex;align-items:center;justify-content:center;gap:5px;margin-top:6px;padding:7px 10px;border-radius:20px;background:var(--amber-l);color:var(--amber);font-size:12px;font-weight:700;border:none;cursor:pointer;width:100%">🔔 Avisame cuando haya stock</button>`;
     }
     return `<div class="cprod">
       <div class="cprod-emoji">${p.emoji}</div>
@@ -377,9 +404,40 @@ function renderClientProducts(){
       <div class="cprod-price">${fmtMoney(p.price)}<span style="font-size:12px;font-weight:500;color:var(--ink-3)"> /${p.unit}</span></div>
       <div class="cprod-stock ${stClass}">${stLabel}</div>
       ${waBtn}
+      ${notifyBtn}
       ${p.category?`<div style="margin-top:8px"><span class="tag">${p.category}</span></div>`:''}
     </div>`;
   }).join('');
+}
+
+// ─────────────────────────────────────────────
+// LISTA DE ESPERA
+// ─────────────────────────────────────────────
+let notifyProdId = null;
+
+function openNotifyModal(prodId, prodName, storeName){
+  notifyProdId = prodId;
+  document.getElementById('notify-prod-name').textContent = `${prodName}${storeName?' — '+storeName:''}`;
+  document.getElementById('notify-name').value = '';
+  document.getElementById('notify-phone').value = '';
+  document.getElementById('modal-notify').style.display = 'flex';
+}
+function closeNotifyModal(){
+  document.getElementById('modal-notify').style.display = 'none';
+  notifyProdId = null;
+}
+function saveNotify(){
+  const name = document.getElementById('notify-name').value.trim();
+  if(!name){ document.getElementById('notify-name').focus(); return; }
+  const phone = document.getElementById('notify-phone').value.trim();
+  const wl = JSON.parse(localStorage.getItem('ml_waitlist')||'[]');
+  // evitar duplicados del mismo usuario para el mismo producto
+  const already = wl.find(e=>e.prodId===notifyProdId && e.name.toLowerCase()===name.toLowerCase());
+  if(already){ toast('Ya estás anotado para ese producto 👍'); closeNotifyModal(); return; }
+  wl.push({ prodId: notifyProdId, name, phone, ts: Date.now() });
+  localStorage.setItem('ml_waitlist', JSON.stringify(wl));
+  closeNotifyModal();
+  toast('✅ ¡Listo! Te avisamos cuando haya stock.');
 }
 
 function clientCat(el,c){ clientCatFilter=c; renderClientProducts(); }
