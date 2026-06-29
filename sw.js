@@ -1,14 +1,13 @@
-// MercadoLocal - Service Worker
-// Hace que la app funcione sin conexión (offline-first)
+// MercadoLocal - Service Worker v4
+// Hace que las DOS apps funcionen sin conexión (offline-first)
 
-const CACHE_NAME = 'mercadolocal-v3';
+const CACHE_NAME = 'mercadolocal-v4';
 
-// Archivos que se guardan apenas se instala la app
 const PRECACHE_URLS = [
   './',
   './index.html',
   './admin.html',
-  './manifest.json',
+  './manifest-vitrina.json',
   './manifest-admin.json',
   './icon-192.png',
   './icon-512.png',
@@ -17,8 +16,6 @@ const PRECACHE_URLS = [
   './favicon-16.png'
 ];
 
-// INSTALL: guarda los archivos base. Si alguno falla, NO rompe todo
-// (antes usaba addAll, que era todo o nada)
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) =>
@@ -31,7 +28,6 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// ACTIVATE: borra cachés viejas y toma control inmediato
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -40,9 +36,6 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// FETCH:
-// - Navegación (abrir la app): red primero, si no hay internet usa el index.html guardado
-// - Resto de archivos (íconos, manifest, etc): caché primero, y si no está, lo busca y lo guarda
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET') return;
@@ -56,7 +49,6 @@ self.addEventListener('fetch', (event) => {
           return res;
         })
         .catch(() =>
-          // Sin internet: busca la página exacta que se pidió (admin.html o index.html)
           caches.match(req).then((cached) => cached || caches.match('./index.html'))
         )
     );
