@@ -1,6 +1,6 @@
 {
-  "id": "./admin.html",
-  "name": "MercadoLocal — Panel de gestión",
+  "id": "/Mercado-local-/admin",
+  "name": "MercadoLocal — Panel",
   "short_name": "ML Panel",
   "description": "Panel de gestión de MercadoLocal",
   "start_url": "./admin.html",
