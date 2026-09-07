@@ -145,8 +145,8 @@ tr:hover td{background:var(--surface)}
     </div>
     <div class="login-box">
       <div class="form-group">
-        <label>Usuario</label>
-        <input type="text" id="login-user" placeholder="Ingresá tu usuario" autocomplete="off">
+        <label>Correo electrónico</label>
+        <input type="email" id="login-user" placeholder="tucorreo@gmail.com" autocomplete="off">
       </div>
       <div class="form-group">
         <label>Contraseña</label>
@@ -315,6 +315,7 @@ tr:hover td{background:var(--surface)}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDfRNu35Rjopo5tUagq_wJWYhNXGeB2R14",
@@ -326,13 +327,15 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 // ── CONSTANTS ──
 const STORE_EMOJIS=['🥩','🐔','🥬','🧀','🍞','🛋️','👗','🧹','💊','🔧','📦','🏪','🍕','☕','🎮','📱','🌸','🐟'];
 const PROD_EMOJIS=['🥩','🍗','🐟','🧀','🥛','🍳','🥚','🍞','🥬','🍎','🥦','🧅','🌽','🍬','🧃','🥤','🍺','🧴','🧹','🛋️','👕','👟','📦','🔧','💊','🌿'];
 const COLORS=['#2563EB','#DC2626','#059669','#D97706','#7C3AED','#DB2777','#0891B2','#65A30D','#EA580C','#4F46E5'];
-const USERS=[{user:'galaxi0806',pass:'806080',name:'Administrador'}];
 const LOW_THR=5;
+
+function show(v){ ['login','admin'].forEach(x=>document.getElementById('view-'+x).classList.remove('active')); document.getElementById('view-'+v).classList.add('active'); }
 
 // ── STATE ──
 let stores=[], products=[];
@@ -365,19 +368,34 @@ window.toggleTheme=function(){ const cur=document.documentElement.getAttribute('
 window.toggleDrawer=function(){ document.getElementById('sidebar').classList.toggle('open'); document.getElementById('sidebar-backdrop').classList.toggle('open'); };
 function closeDrawer(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-backdrop').classList.remove('open'); }
 
-// ── LOGIN ──
-function show(v){ ['login','admin'].forEach(x=>document.getElementById('view-'+x).classList.remove('active')); document.getElementById('view-'+v).classList.add('active'); }
-window.logout=function(){ currentUser=null; show('login'); };
-window.doLogin=function(){
-  const u=document.getElementById('login-user').value.trim();
-  const p=document.getElementById('login-pass').value;
-  const found=USERS.find(x=>x.user===u&&x.pass===p);
-  if(!found){ toast('⚠️ Usuario o contraseña incorrectos'); return; }
-  currentUser=found;
-  document.getElementById('sa-name').textContent=found.name;
-  document.getElementById('sa-avatar').textContent=found.name[0].toUpperCase();
-  show('admin'); adminPanel('dashboard',document.querySelector('.nav-item'));
+// ── LOGIN con Firebase Auth ──
+window.doLogin=async function(){
+  const email=document.getElementById('login-user').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  if(!email||!pass){ toast('⚠️ Completá los dos campos'); return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    // onAuthStateChanged se encarga del resto
+  } catch(e) {
+    toast('⚠️ Correo o contraseña incorrectos');
+  }
 };
+window.logout=async function(){
+  await signOut(auth);
+  show('login');
+};
+
+// ── AUTH STATE ──
+onAuthStateChanged(auth, user => {
+  if(user){
+    document.getElementById('sa-name').textContent=user.email.split('@')[0];
+    document.getElementById('sa-avatar').textContent=user.email[0].toUpperCase();
+    show('admin');
+    adminPanel('dashboard', document.querySelector('.nav-item'));
+  } else {
+    show('login');
+  }
+});
 
 // ── ADMIN NAV ──
 window.adminPanel=function(name,el){
@@ -586,11 +604,11 @@ window.clearWaitlist=function(){ if(!confirm('¿Limpiar toda la lista de espera?
 // ── FIREBASE LISTENERS ──
 onSnapshot(collection(db,'stores'),snap=>{
   stores=snap.docs.map(d=>({id:d.id,...d.data()}));
-  if(currentUser){ renderAdminStores(); renderDashboard(); renderInventory(); renderLowStock(); refreshStoreSelects(); updateBadge(); }
+  if(auth.currentUser){ renderAdminStores(); renderDashboard(); renderInventory(); renderLowStock(); refreshStoreSelects(); updateBadge(); }
 });
 onSnapshot(collection(db,'products'),snap=>{
   products=snap.docs.map(d=>({id:d.id,...d.data()}));
-  if(currentUser){ renderDashboard(); renderInventory(); renderLowStock(); refreshStoreSelects(); updateBadge(); }
+  if(auth.currentUser){ renderDashboard(); renderInventory(); renderLowStock(); refreshStoreSelects(); updateBadge(); }
 });
 
 // overlay close
@@ -598,7 +616,7 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 
 // ── INIT ──
 applyTheme();
-show('login');
+// onAuthStateChanged maneja qué vista mostrar
 if('serviceWorker' in navigator){ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{})); }
 </script>
 </body>
