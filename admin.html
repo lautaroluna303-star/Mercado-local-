@@ -344,9 +344,12 @@ let editingStoreId=null, editingProdId=null;
 let deletingType=null, deletingId=null;
 let invCatFilter='all';
 let currentUser=null;
+let waitlist=[], unsubWait=null;
 
 // ── UTILS ──
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fail(e){ console.error(e); toast(e&&e.code==='permission-denied'?'⚠️ Sin permiso para guardar. Revisá las reglas de Firestore.':'⚠️ No se pudo guardar. Intentá de nuevo.',4000); }
 function fmtMoney(n){ return '$'+Number(n).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2}); }
 function toast(msg,ms=2400){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms); }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
@@ -392,7 +395,9 @@ onAuthStateChanged(auth, user => {
     document.getElementById('sa-avatar').textContent=user.email[0].toUpperCase();
     show('admin');
     adminPanel('dashboard', document.querySelector('.nav-item'));
+    startWaitlist();
   } else {
+    stopWaitlist();
     show('login');
   }
 });
@@ -467,7 +472,7 @@ window.saveStore=async function(){
   if(!name){ toast('⚠️ Ingresá un nombre'); return; }
   const id=editingStoreId||uid();
   showSaving();
-  await setDoc(doc(db,'stores',id),{name,category,desc,emoji:selStoreEmoji,color:selColor});
+  try{ await setDoc(doc(db,'stores',id),{name,category,desc,emoji:selStoreEmoji,color:selColor}); }catch(e){ fail(e); return; }
   closeModal('modal-store');
   toast(editingStoreId?'✅ Negocio actualizado':'✅ Negocio agregado');
 };
@@ -502,8 +507,9 @@ window.saveProduct=async function(){
   const wasAbove=existing?existing.stock>0:false;
   const id=editingProdId||uid();
   showSaving();
-  await setDoc(doc(db,'products',id),{name,storeId,price,stock,category,unit,emoji:selEmoji});
+  try{ await setDoc(doc(db,'products',id),{name,storeId,price,stock,category,unit,emoji:selEmoji}); }catch(e){ fail(e); return; }
   if(wasAbove&&stock===0){ const s=stores.find(x=>x.id===storeId); sendStockNotif(name,s?s.name:''); }
+  if(existing&&existing.stock===0&&stock>0) notifyWaiting(id);
   closeModal('modal-product');
   toast(editingProdId?'✅ Producto actualizado':'✅ Producto agregado');
 };
@@ -537,7 +543,8 @@ window.saveAddStock=async function(){
   if(isNaN(qty)||qty<=0){ toast('⚠️ Cantidad inválida'); return; }
   const p=products.find(x=>x.id===id); if(!p) return;
   showSaving();
-  await setDoc(doc(db,'products',id),{...p,stock:p.stock+qty});
+  try{ await setDoc(doc(db,'products',id),{...p,stock:p.stock+qty}); }catch(e){ fail(e); return; }
+  if(p.stock===0) notifyWaiting(id);
   closeModal('modal-addstock');
   toast(`📦 +${qty} ${p.unit} a ${p.name}`);
 };
@@ -545,29 +552,33 @@ window.saveAddStock=async function(){
 window.openDelete=function(type,id,name){ deletingType=type; deletingId=id; document.getElementById('del-name').textContent=name; openModal('modal-delete'); };
 window.confirmDelete=async function(){
   showSaving();
-  if(deletingType==='store'){
-    await deleteDoc(doc(db,'stores',deletingId));
-    const toDelete=products.filter(x=>x.storeId===deletingId);
-    for(const p of toDelete) await deleteDoc(doc(db,'products',p.id));
-    toast('🗑️ Negocio eliminado');
-  } else {
-    await deleteDoc(doc(db,'products',deletingId));
-    toast('🗑️ Producto eliminado');
-  }
+  try{
+    if(deletingType==='store'){
+      await deleteDoc(doc(db,'stores',deletingId));
+      const toDelete=products.filter(x=>x.storeId===deletingId);
+      for(const p of toDelete) await deleteDoc(doc(db,'products',p.id));
+      toast('🗑️ Negocio eliminado');
+    } else {
+      await deleteDoc(doc(db,'products',deletingId));
+      toast('🗑️ Producto eliminado');
+    }
+  }catch(e){ fail(e); return; }
   closeModal('modal-delete');
 };
 
 // ── SETTINGS ──
+function normWa(v){ let n=String(v||'').replace(/\D/g,''); if(n.length===10) n='549'+n; return n; }
 async function renderSettings(){
   const snap=await getDoc(doc(db,'settings','config'));
-  if(snap.exists()) document.getElementById('set-whatsapp').value=snap.data().whatsapp||'';
+  if(snap.exists()) document.getElementById('set-whatsapp').value=normWa(snap.data().whatsapp||'');
 }
 window.saveSettings=async function(){
   const raw=document.getElementById('set-whatsapp').value.trim();
-  const num=raw.replace(/\D/g,'');
+  const num=normWa(raw);
   if(raw&&num.length<8){ toast('⚠️ Revisá el número'); return; }
   showSaving();
-  await setDoc(doc(db,'settings','config'),{whatsapp:num});
+  try{ await setDoc(doc(db,'settings','config'),{whatsapp:num}); }catch(e){ fail(e); return; }
+  document.getElementById('set-whatsapp').value=num;
   toast(num?'✅ WhatsApp guardado':'✅ Configuración guardada');
 };
 
@@ -590,16 +601,33 @@ function sendStockNotif(productName,storeName){
 }
 
 // ── LISTA DE ESPERA ──
-function getWaitlist(){ try{ return JSON.parse(localStorage.getItem('ml_waitlist')||'[]'); }catch(e){ return []; } }
+function getWaitlist(){ return waitlist; }
+function startWaitlist(){
+  if(unsubWait) return;
+  unsubWait=onSnapshot(collection(db,'waitlist'),snap=>{
+    waitlist=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));
+    updateBadge();
+    if(document.getElementById('panel-waitlist').classList.contains('active')) renderWaitlist();
+  },err=>{ console.error(err); unsubWait=null; });
+}
+function stopWaitlist(){ if(unsubWait){ unsubWait(); unsubWait=null; } waitlist=[]; }
+function notifyWaiting(prodId){
+  const n=waitlist.filter(e=>e.prodId===prodId).length;
+  if(n) setTimeout(()=>toast(`🔔 ${n} cliente${n>1?'s':''} esperando este producto. Avisales desde Lista de espera.`,5000),2600);
+}
 function renderWaitlist(){
   const wl=getWaitlist();
   const el=document.getElementById('waitlist-content');
   if(!wl.length){ el.innerHTML=`<div class="empty-state"><div class="icon">🔔</div><h3>Ningún cliente esperando</h3><p>Cuando un cliente toque "Avisame cuando haya stock" en la vitrina, su nombre aparece acá.</p></div>`; return; }
   const byProd={};
   wl.forEach(e=>{ if(!byProd[e.prodId]) byProd[e.prodId]=[]; byProd[e.prodId].push(e); });
-  el.innerHTML=Object.entries(byProd).map(([prodId,entries])=>{ const p=products.find(x=>x.id===prodId); const s=p?stores.find(x=>x.id===p.storeId):null; const pName=p?`${p.emoji} ${p.name}`:'Producto eliminado'; const sName=s?s.name:''; return `<div class="card" style="padding:16px;margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div><div style="font-weight:800;font-size:14px">${pName}</div>${sName?`<div style="font-size:12px;color:var(--ink-3)">${sName}</div>`:''}</div><span class="badge badge-amber">${entries.length} esperando</span></div><div style="display:flex;flex-direction:column;gap:6px">${entries.map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface);border-radius:var(--r);font-size:13px"><div><span style="font-weight:600">👤 ${e.name}</span><span style="color:var(--ink-3);font-size:11px;margin-left:8px">${new Date(e.ts).toLocaleDateString('es-AR')}</span></div>${e.phone?`<a href="https://wa.me/${e.phone.replace(/\D/g,'')}" target="_blank" class="btn btn-whatsapp btn-sm">💬 WA</a>`:''}</div>`).join('')}</div></div>`; }).join('');
+  el.innerHTML=Object.entries(byProd).map(([prodId,entries])=>{ const p=products.find(x=>x.id===prodId); const s=p?stores.find(x=>x.id===p.storeId):null; const pName=p?`${esc(p.emoji)} ${esc(p.name)}`:'Producto eliminado'; const sName=s?esc(s.name):''; return `<div class="card" style="padding:16px;margin-bottom:12px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div><div style="font-weight:800;font-size:14px">${pName}</div>${sName?`<div style="font-size:12px;color:var(--ink-3)">${sName}</div>`:''}</div><span class="badge badge-amber">${entries.length} esperando</span></div><div style="display:flex;flex-direction:column;gap:6px">${entries.map(e=>`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--surface);border-radius:var(--r);font-size:13px"><div><span style="font-weight:600">👤 ${esc(e.name)}</span><span style="color:var(--ink-3);font-size:11px;margin-left:8px">${new Date(e.ts).toLocaleDateString('es-AR')}</span></div><div style="display:flex;gap:6px">${e.phone?`<a href="https://wa.me/${String(e.phone).replace(/\D/g,'')}" target="_blank" rel="noopener" class="btn btn-whatsapp btn-sm">💬 WA</a>`:''}<button class="btn btn-ghost btn-sm" data-id="${esc(e.id)}" onclick="removeWait(this.dataset.id)">✖</button></div></div>`).join('')}</div></div>`; }).join('');
 }
-window.clearWaitlist=function(){ if(!confirm('¿Limpiar toda la lista de espera?')) return; localStorage.setItem('ml_waitlist','[]'); updateBadge(); renderWaitlist(); toast('🗑️ Lista de espera limpiada'); };
+window.removeWait=async function(id){ try{ await deleteDoc(doc(db,'waitlist',id)); }catch(e){ fail(e); } };
+window.clearWaitlist=async function(){
+  if(!waitlist.length||!confirm('¿Limpiar toda la lista de espera?')) return;
+  try{ for(const e of waitlist) await deleteDoc(doc(db,'waitlist',e.id)); toast('🗑️ Lista de espera limpiada'); }catch(err){ fail(err); }
+};
 
 // ── FIREBASE LISTENERS ──
 onSnapshot(collection(db,'stores'),snap=>{
